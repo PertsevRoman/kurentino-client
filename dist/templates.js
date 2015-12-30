@@ -1,0 +1,2 @@
+angular.module("templatescache", []).run(["$templateCache", function($templateCache) {$templateCache.put("./dist/kc-call-container/template.html","<div class=\"row\">\n    <div class=\"col-lg-2\">\n        <peer-viewer ng-repeat=\"peer in connectedPeers\" width=\"{{peer.width}}\" height=\"{{peer.height}}\"></peer-viewer>\n    </div>\n    <div class=\"col-lg-10\">\n    </div>\n</div>");
+$templateCache.put("./dist/kc-peer-viewer/template.html","<div class=\"peer-viewer\">\n   <video autoplay width=\"{{width}}\" height=\"{{height}}\"></video>\n</div>");}]);

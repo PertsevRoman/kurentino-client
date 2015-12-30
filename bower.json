@@ -1,0 +1,8 @@
+{
+	"name": "kurentino-client",
+	"dependencies": {
+		"bootstrap": "4.0.0-alpha",
+        "angular": "1.4",
+        "font-awesome": "4.5.0"
+	}
+}
