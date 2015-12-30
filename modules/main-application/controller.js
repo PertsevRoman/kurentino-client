@@ -15,6 +15,11 @@ kclient.controller('mainCtrl', function($scope) {
         LOGOUT: 'logout'
     };
 
+    // Типы принимающих сообщений
+    $scope.responseTypes = {
+        COME_IN: 'comein'
+    };
+
     /**
      * Функция инициализации соединения с сервером
      */
@@ -39,8 +44,12 @@ kclient.controller('mainCtrl', function($scope) {
      */
     $scope.login = function () {
         var data = {
-
+            id: $scope.LOGIN,
+            name: $scope.loginName,
+            room: $scope.roomName
         }
+
+        $scope.sendMessage(data);
     };
 
     /**
