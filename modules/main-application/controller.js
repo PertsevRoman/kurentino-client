@@ -3,9 +3,16 @@
  */
 
 kclient.controller('mainCtrl', function($scope) {
+    // Переменные
     $scope.vars = {
         socket: new WebSocket('ws://' + host.location),
         logged: false
+    };
+
+    // Типы сообщений
+    $scope.msgTypes = {
+        LOGIN: 'login',
+        LOGOUT: 'logout'
     };
 
     /**
@@ -31,18 +38,17 @@ kclient.controller('mainCtrl', function($scope) {
      * Логин
      */
     $scope.login = function () {
+        var data = {
+
+        }
     };
 
     /**
      * Отправка сообщения
+     * @param msg JSON
      */
-    $scope.sendMessage = function () {
-        if($scope.socket) {
-            var socketData = {
-                id: 'login',
-                name: $scope.userName,
-                room: $scope.roomName
-            };
-        }
+    $scope.sendMessage = function (msg) {
+        var strMsg = JSON.stringify(msg);
+        $scope.vars.socket.send(strMsg);
     }
 });
