@@ -38,7 +38,6 @@ kclient.controller('mainCtrl', function($scope) {
         });
     };
 
-
     /**
      * Логин
      */
@@ -47,7 +46,7 @@ kclient.controller('mainCtrl', function($scope) {
             id: $scope.LOGIN,
             name: $scope.loginName,
             room: $scope.roomName
-        }
+        };
 
         $scope.sendMessage(data);
     };
@@ -59,5 +58,22 @@ kclient.controller('mainCtrl', function($scope) {
     $scope.sendMessage = function (msg) {
         var strMsg = JSON.stringify(msg);
         $scope.vars.socket.send(strMsg);
-    }
+    };
+
+    /**
+     * Прием сообщения
+     * @param msg Строка
+     */
+    $scope.socket.onmessage = function(msg) {
+        var json = JSON.parse(msg);
+
+        switch (json['id']) {
+            case $scope.responseTypes.COME_IN:
+                console.log('Вам позволено войти в комнату');
+                $scope.logged = true;
+                break;
+            default:
+                console.log('Обработчик сообщения еще не имплементирован');
+        }
+    };
 });
