@@ -17,7 +17,27 @@
     </head>
     <body ng-app="kurentinoClient">
         <div ng-controller="mainCtrl">
-            <call-container></call-container>
+            <div ng-show="!logged">
+                <div class="col-md-4"></div>
+                <div class="col-md-4">
+                    <br />
+                    <br />
+                    <br />
+                    <br />
+                    <br />
+                    <label class="control-label">Имя участника</label>
+                    <input type="text" class="form-control" ng-model="vars.loginName"/>
+                    <br />
+                    <br />
+                    <label class="control-label">Имя комнаты</label>
+                    <input type="text" class="form-control" ng-model="vars.roomName"/>
+                    <br />
+                    <br />
+                    <button class="btn btn-info" ng-click="login()">Войти</button>
+                </div>
+                <div class="col-md-4"></div>
+            </div>
+            <call-container ng-show="logged"></call-container>
         </div>
     </body>
 </html>
