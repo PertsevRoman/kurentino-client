@@ -9,18 +9,6 @@ kclient.directive('callContainer', function ($templateCache) {
             scope: true,
             link: function ($scope, element, attrs) {
                 $scope.connectedPeers = [];
-                
-                $scope.connectedPeers.push({
-                    id: 1,
-                    width: 400,
-                    height: 300
-                });
-
-                $scope.connectedPeers.push({
-                    id: 2,
-                    width: 400,
-                    height: 300
-                });
             }
     };
 });
