@@ -39,12 +39,12 @@
                 </div>
                 <div class="col-md-4"></div>
             </div>
-            <!--<call-container ng-show="vars.logged"></call-container>-->
             <div ng-show="vars.logged">
                 <video id="vid" width="320" height="240" autoplay></video>
                 <button class="btn" ng-click="startRecord()">Начать запись</button>
                 <button class="btn" ng-click="stopRecord()">Остановить запись</button>
             </div>
+            <call-container ng-show="vars.logged"></call-container>
         </div>
     </body>
 </html>

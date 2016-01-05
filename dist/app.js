@@ -9,7 +9,7 @@ kclient.config(function($logProvider){
 kclient.controller('mainCtrl', function($scope) {
     // Переменные
     $scope.vars = {
-        socket: new WebSocket('wss://localhost' + ':8025'),
+        socket: new WebSocket('wss://' + location.host + ':8025'),
         logged: false,
         sendPeer: null
     };
@@ -30,7 +30,8 @@ kclient.controller('mainCtrl', function($scope) {
         COME_IN: 'comein',
         SERVER_ERROR: 'error',
         ICE: 'iceCandidate',
-        OFFER_ANSWER: 'offerAnswer'
+        OFFER_ANSWER: 'offerAnswer',
+        NEW_USER: 'newParter'
     };
 
     /**
@@ -103,7 +104,7 @@ kclient.controller('mainCtrl', function($scope) {
      */
     var createPeer = function () {
         var mediaOpts = {
-            audio: true,
+            audio: false,
             video: {
                 mandatory: {
                     minFrameRate: 15
@@ -199,6 +200,9 @@ kclient.controller('mainCtrl', function($scope) {
                             return console.error('Не удалось добавить ICE сервер: ' + error);
                         }
                     });
+                } break;
+            case $scope.serverMsgTypes.NEW_USER: {
+                    console.log('В комнату вошел новый пользователь: ' + json['name']);
                 } break;
             default:
                 console.log('Обработчик сообщения еще не имплементирован');
