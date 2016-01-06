@@ -10,6 +10,7 @@ kclient.directive('peerViewer', function ($templateCache) {
         link: function ($scope, element, attrs) {
             $scope.width = parseInt(attrs['width'], 10);
             $scope.height = parseInt(attrs['height'], 10);
+            var userName = attrs['name'];
 
             $scope.videoElem = element.find('video')[0];
 
@@ -17,12 +18,12 @@ kclient.directive('peerViewer', function ($templateCache) {
              * Обработка метки ICE сервера
              */
             var onIceCandidate = function (candidate, wp) {
-                console.log("Local candidate" + JSON.stringify(candidate));
+                console.log("Локальный кандидат: " + JSON.stringify(candidate));
 
                 var message = {
-                    id: 'onIceCandidate',
+                    id: $scope.clientMsgTypes.ON_ICE,
                     candidate: candidate,
-                    name: name
+                    name: userName
                 };
 
                 $scope.sendMessage(message);
@@ -36,14 +37,15 @@ kclient.directive('peerViewer', function ($templateCache) {
              */
             var offerToReceiveVideo = function(error, offerSdp, wp){
                 if (error) {
-                    return console.error ("sdp offer error");
+                    return console.error(error);
                 }
 
-                console.log('Invoking SDP offer callback function');
+                console.log('Отправка сообщения на прием видео');
 
-                var msg =  { id : "receiveVideoFrom",
-                    sender : name,
-                    sdpOffer : offerSdp
+                var msg =  {
+                    id : $scope.clientMsgTypes.OFFER_TO_RECIEVE,
+                    sender : userName,
+                    offer : offerSdp
                 };
 
                 $scope.sendMessage(msg);
@@ -68,6 +70,10 @@ kclient.directive('peerViewer', function ($templateCache) {
             };
 
             $scope.peer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options, peerCreated);
+
+            $scope.peersMap[userName] = $scope.peer;
+
+            console.log('Пиры: ' + JSON.stringify($scope.peersMap));
         }
     };
 });

@@ -8,7 +8,6 @@ kclient.directive('callContainer', function ($templateCache) {
             template: $templateCache.get('./dist/kc-call-container/template.html'),
             scope: true,
             link: function ($scope, element, attrs) {
-                $scope.connectedPeers = [];
             }
     };
 });

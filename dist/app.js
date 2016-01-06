@@ -14,6 +14,12 @@ kclient.controller('mainCtrl', function($scope) {
         sendPeer: null
     };
 
+    // Подключенные участники
+    $scope.connectedPeers = [];
+
+    // Словарь пиров
+    $scope.peersMap = {};
+
     // Типы отправляемых сообщений
     $scope.clientMsgTypes = {
         LOGIN: 'login',
@@ -22,7 +28,8 @@ kclient.controller('mainCtrl', function($scope) {
         OFFER: 'offerVideo',
         START_RECORD: 'startRec',
         STOP_RECORD: 'stopRec',
-        ON_ICE: 'onIceCandidate'
+        ON_ICE: 'onIceCandidate',
+        OFFER_TO_RECIEVE: 'sendVideoTo'
     };
 
     // Типы принимаемых сообщений
@@ -31,7 +38,15 @@ kclient.controller('mainCtrl', function($scope) {
         SERVER_ERROR: 'error',
         ICE: 'iceCandidate',
         OFFER_ANSWER: 'offerAnswer',
-        NEW_USER: 'newParter'
+        NEW_USER: 'newParter',
+        EXISTS_LIST: 'existsList'
+    };
+
+    var randWDclassic = function(n) {
+        var s ='', abd ='abcdefghijklmnopqrstuvwxyz0123456789', aL = abd.length;
+        while(s.length < n)
+            s += abd[Math.random() * aL|0];
+        return s;
     };
 
     /**
@@ -51,7 +66,7 @@ kclient.controller('mainCtrl', function($scope) {
             }
         });
 
-        $scope.vars.loginName = 'Роман';
+        $scope.vars.loginName = randWDclassic(9);
         $scope.vars.roomName = 'Тест';
     };
 
@@ -123,7 +138,8 @@ kclient.controller('mainCtrl', function($scope) {
 
                 var message = {
                     id: $scope.clientMsgTypes.ON_ICE,
-                    candidate: candidate
+                    candidate: candidate,
+                    name: $scope.vars.loginName
                 };
 
                 $scope.sendMessage(message);
@@ -162,6 +178,15 @@ kclient.controller('mainCtrl', function($scope) {
     };
 
     /**
+     * Добавление нового пира
+     * @param user
+     */
+    $scope.addNewPeer = function (user) {
+        $scope.connectedPeers.push(user);
+        $scope.$apply();
+    };
+
+    /**
      * Прием сообщения
      * @param msg Строка
      */
@@ -179,16 +204,28 @@ kclient.controller('mainCtrl', function($scope) {
                     createPeer();
                 }
                 break;
-            case $scope.serverMsgTypes.SERVER_ERROR:
-                console.log('Ошибка сервера');
-                break;
+            case $scope.serverMsgTypes.SERVER_ERROR: {
+                    console.log('Ошибка сервера');
+                } break;
             case $scope.serverMsgTypes.OFFER_ANSWER: {
-                    console.log('Пользователю пришел ответ');
-                    $scope.vars.sendPeer.processAnswer(json['answer'], function (error) {
-                        if(error) {
-                            console.error(error);
-                        }
-                    });
+                    console.log('Основные пиры: ' + JSON.stringify($scope.peersMap));
+
+                    if(json['name'] === $scope.vars.loginName) {
+                        console.log('Ответ текущему пользователю' + json['name']);
+                        $scope.vars.sendPeer.processAnswer(json['answer'], function (error) {
+                            if(error) {
+                                console.error(error);
+                            }
+                        });
+                    } else {
+                        console.log('Ответ передающему пользователю: ' + json['name']);
+
+                        $scope.peersMap[json['name']].processAnswer(json['answer'], function(error) {
+                            if(error) {
+                                console.error(error);
+                            }
+                        });
+                    }
                 } break;
             case $scope.serverMsgTypes.ICE: {
                     console.log('Пришла метка ICE сервера. Пользователь: ' + json['name']);
@@ -199,6 +236,18 @@ kclient.controller('mainCtrl', function($scope) {
                         if(error) {
                             return console.error('Не удалось добавить ICE сервер: ' + error);
                         }
+                    });
+                } break;
+            case $scope.serverMsgTypes.EXISTS_LIST: {
+                    console.log('Сообщение: ' + JSON.stringify(json))
+
+                    angular.forEach(json['names'], function (name, index) {
+                        var existUser = {};
+                        existUser['name'] = name;
+                        existUser['width'] = 320;
+                        existUser['height'] = 240;
+
+                        $scope.addNewPeer(existUser);
                     });
                 } break;
             case $scope.serverMsgTypes.NEW_USER: {
@@ -224,6 +273,7 @@ kclient.directive('peerViewer', function ($templateCache) {
         link: function ($scope, element, attrs) {
             $scope.width = parseInt(attrs['width'], 10);
             $scope.height = parseInt(attrs['height'], 10);
+            var userName = attrs['name'];
 
             $scope.videoElem = element.find('video')[0];
 
@@ -231,12 +281,12 @@ kclient.directive('peerViewer', function ($templateCache) {
              * Обработка метки ICE сервера
              */
             var onIceCandidate = function (candidate, wp) {
-                console.log("Local candidate" + JSON.stringify(candidate));
+                console.log("Локальный кандидат: " + JSON.stringify(candidate));
 
                 var message = {
-                    id: 'onIceCandidate',
+                    id: $scope.clientMsgTypes.ON_ICE,
                     candidate: candidate,
-                    name: name
+                    name: userName
                 };
 
                 $scope.sendMessage(message);
@@ -250,14 +300,15 @@ kclient.directive('peerViewer', function ($templateCache) {
              */
             var offerToReceiveVideo = function(error, offerSdp, wp){
                 if (error) {
-                    return console.error ("sdp offer error");
+                    return console.error(error);
                 }
 
-                console.log('Invoking SDP offer callback function');
+                console.log('Отправка сообщения на прием видео');
 
-                var msg =  { id : "receiveVideoFrom",
-                    sender : name,
-                    sdpOffer : offerSdp
+                var msg =  {
+                    id : $scope.clientMsgTypes.OFFER_TO_RECIEVE,
+                    sender : userName,
+                    offer : offerSdp
                 };
 
                 $scope.sendMessage(msg);
@@ -282,6 +333,10 @@ kclient.directive('peerViewer', function ($templateCache) {
             };
 
             $scope.peer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options, peerCreated);
+
+            $scope.peersMap[userName] = $scope.peer;
+
+            console.log('Пиры: ' + JSON.stringify($scope.peersMap));
         }
     };
 });
@@ -295,7 +350,6 @@ kclient.directive('callContainer', function ($templateCache) {
             template: $templateCache.get('./dist/kc-call-container/template.html'),
             scope: true,
             link: function ($scope, element, attrs) {
-                $scope.connectedPeers = [];
             }
     };
 });
