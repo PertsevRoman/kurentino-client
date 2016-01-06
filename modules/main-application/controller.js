@@ -124,6 +124,9 @@ kclient.controller('mainCtrl', function($scope) {
             }
         };
 
+        mediaOpts.video.mandatory.mediaSource = 'screen';
+        mediaOpts.video.mandatory.chromeMediaSource = 'screen';
+
         var vid = $('#vid')[0];
 
         var options = {
