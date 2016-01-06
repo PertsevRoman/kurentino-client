@@ -64,8 +64,18 @@ kclient.directive('peerViewer', function ($templateCache) {
                 this.generateOffer(offerToReceiveVideo);
             };
 
+            var mediaOpts = {
+                audio: true,
+                video: {
+                    mandatory: {
+                        minFrameRate: 15
+                    }
+                }
+            };
+
             var options = {
                 remoteVideo: $scope.videoElem,
+                mediaConstraints: mediaOpts,
                 onicecandidate: onIceCandidate
             };
 

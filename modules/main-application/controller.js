@@ -35,7 +35,8 @@ kclient.controller('mainCtrl', function($scope) {
         ICE: 'iceCandidate',
         OFFER_ANSWER: 'offerAnswer',
         NEW_USER: 'newParter',
-        EXISTS_LIST: 'existsList'
+        EXISTS_LIST: 'existsList',
+        REMOVE_USER: 'removeUser'
     };
 
     var randWDclassic = function(n) {
@@ -115,7 +116,7 @@ kclient.controller('mainCtrl', function($scope) {
      */
     var createPeer = function () {
         var mediaOpts = {
-            audio: false,
+            audio: true,
             video: {
                 mandatory: {
                     minFrameRate: 15
@@ -248,6 +249,20 @@ kclient.controller('mainCtrl', function($scope) {
                 } break;
             case $scope.serverMsgTypes.NEW_USER: {
                     console.log('В комнату вошел новый пользователь: ' + json['name']);
+                } break;
+            case $scope.serverMsgTypes.REMOVE_USER: {
+                    console.log('Удаление пользователя: ' + json['name']);
+
+                    // Освобождение пира
+                    $scope.peersMap[json['name']].dispose();
+
+                    // Удаление узла
+                    $scope.connectedPeers = $scope.connectedPeers.filter(function (elem) {
+                        return elem.name !== json['name'];
+                    });
+
+                    // Перерисовка
+                    $scope.$apply();
                 } break;
             default:
                 console.log('Обработчик сообщения еще не имплементирован');
