@@ -68,6 +68,7 @@ gulp.task('templates', function () {
 * Запуск основных задач
 */
 gulp.task('default', function () {
+    gulp.run('templates', 'jslint', 'jsminify', 'csslint', 'cssminify');
     gulp.watch(['./modules/**/*.js', './js/*.js', './modules/**/*.scss', './css/*.scss', './modules/**/*.html'], function(event) {
         gulp.run('templates', 'jslint', 'jsminify', 'csslint', 'cssminify');
     });

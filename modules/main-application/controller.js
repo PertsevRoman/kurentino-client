@@ -119,13 +119,12 @@ kclient.controller('mainCtrl', function($scope) {
             audio: true,
             video: {
                 mandatory: {
+                    maxWidth: 320,
+                    maxHeight: 240,
                     minFrameRate: 15
                 }
             }
         };
-
-        mediaOpts.video.mandatory.mediaSource = 'screen';
-        mediaOpts.video.mandatory.chromeMediaSource = 'screen';
 
         var vid = $('#vid')[0];
 

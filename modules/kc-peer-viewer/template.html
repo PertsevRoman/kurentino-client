@@ -1,3 +1,6 @@
 <div class="peer-viewer">
-   <video autoplay width="{{width}}" height="{{height}}" send="sendMessage(msg)"></video>
+   <div id="video-{{vid}}" class="video-box">
+      <video class="video-container" autoplay width="{{width}}" height="{{height}}"></video>
+      <a class="expand" href="#video-{{vid}}"></a>
+   </div>
 </div>

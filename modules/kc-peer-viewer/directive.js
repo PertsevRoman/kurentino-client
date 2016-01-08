@@ -10,7 +10,26 @@ kclient.directive('peerViewer', function ($templateCache) {
         link: function ($scope, element, attrs) {
             $scope.width = parseInt(attrs['width'], 10);
             $scope.height = parseInt(attrs['height'], 10);
+            $scope.vid = parseInt(attrs['vid'], 10);
+
             var userName = attrs['name'];
+
+            $scope.overed = false;
+            $scope.maximized = false;
+
+            /**
+             * Функция вызывается при наведении мыши на элемент
+             */
+            $scope.overMouse = function () {
+                $scope.overed = true;
+            };
+
+            /**
+             * Функция вызывается при выходе указателя мыщи за пределы экрана
+             */
+            $scope.leaveMouse = function() {
+                $scope.overed = false;
+            };
 
             $scope.videoElem = element.find('video')[0];
 
@@ -68,6 +87,8 @@ kclient.directive('peerViewer', function ($templateCache) {
                 audio: true,
                 video: {
                     mandatory: {
+                        maxWidth: 320,
+                        maxHeight: 240,
                         minFrameRate: 15
                     }
                 }
