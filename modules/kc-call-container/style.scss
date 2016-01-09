@@ -1,6 +1,6 @@
 #video-box {
   /* The total width of the image-box, mainly for centering */
-  width: 100%;
+  width: auto;
   height: 600px;
   margin: 0 auto;
   position: relative;
@@ -16,4 +16,10 @@
 
 .video-pull::-webkit-scrollbar {
   width: 0;
+}
+
+.vid {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
 }

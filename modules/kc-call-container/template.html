@@ -2,4 +2,7 @@
     <div class="video-pull">
         <peer-viewer ng-repeat="peer in connectedPeers" name="{{peer.name}}" width="{{peer.width}}" vid="{{$index}}" height="{{peer.height}}"></peer-viewer>
     </div>
+    <div ng-show="vars.logged">
+        <video class="vid" width="160" height="120" autoplay></video>
+    </div>
 </div>

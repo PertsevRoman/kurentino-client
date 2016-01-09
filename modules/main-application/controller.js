@@ -126,7 +126,7 @@ kclient.controller('mainCtrl', function($scope) {
             }
         };
 
-        var vid = $('#vid')[0];
+        var vid = $('.vid')[0];
 
         var options = {
             localVideo: vid,
