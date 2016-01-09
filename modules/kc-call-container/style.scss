@@ -1,6 +1,6 @@
 #video-box {
   /* The total width of the image-box, mainly for centering */
-  width: auto;
+  width: 1120px;
   height: 600px;
   margin: 0 auto;
   position: relative;
@@ -10,6 +10,7 @@
 
 .video-pull {
   height: 600px;
+  width: 1120px;
   overflow-y: auto;
   overflow: -moz-scrollbars-none;
 }
