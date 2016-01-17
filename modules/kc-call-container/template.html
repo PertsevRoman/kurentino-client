@@ -1,4 +1,22 @@
 <div id="video-box">
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="form-group">
+                <label for="sel1">Видео</label>
+                <select class="form-control" ng-model="vars.currentVideoDevice" id="sel1">
+                    <option ng-repeat="audio in videoDevices" value="{{audio.sourceId}}">{{audio.label}}</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="form-group">
+                <label for="sel2">Аудио</label>
+                <select class="form-control" ng-model="vars.currentAudioDevice" id="sel2">
+                    <option ng-repeat="video in audioDevices" value="{{video.sourceId}}">{{video.label}}</option>
+                </select>
+            </div>
+        </div>
+    </div>
     <div class="video-pull">
         <peer-viewer ng-repeat="peer in connectedPeers" name="{{peer.name}}" width="{{peer.width}}" vid="{{$index}}" height="{{peer.height}}"></peer-viewer>
     </div>

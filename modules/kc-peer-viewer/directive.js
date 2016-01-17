@@ -87,9 +87,11 @@ kclient.directive('peerViewer', function ($templateCache) {
                 audio: true,
                 video: {
                     mandatory: {
-                        maxWidth: 320,
-                        maxHeight: 240,
-                        minFrameRate: 15
+                        maxWidth: 800,
+                        maxHeight: 600,
+                        minWidth: 320,
+                        maxWidth: 240,
+                        minFrameRate: 10
                     }
                 }
             };

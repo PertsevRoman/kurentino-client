@@ -7,7 +7,9 @@ kclient.controller('mainCtrl', function($scope) {
     $scope.vars = {
         socket: new WebSocket('wss://' + location.host + ':8025'),
         logged: false,
-        sendPeer: null
+        sendPeer: null,
+        currentAudioDevice: '',
+        currentVideoDevice: ''
     };
 
     // Подключенные участники
@@ -39,6 +41,16 @@ kclient.controller('mainCtrl', function($scope) {
         REMOVE_USER: 'removeUser'
     };
 
+    // Доступные устройства
+    $scope.audioDevices = [];
+    $scope.videoDevices = [];
+    $scope.screenDevices = [];
+
+    /**
+     * Генерация случайной последователяности симоволов
+     * @param n Количество символов
+     * @returns {string} Последовательность
+     */
     var randWDclassic = function(n) {
         var s ='', abd ='abcdefghijklmnopqrstuvwxyz0123456789', aL = abd.length;
         while(s.length < n)
@@ -50,22 +62,19 @@ kclient.controller('mainCtrl', function($scope) {
      * Функция инициализации соединения с сервером
      */
     var initialize = function () {
-        // Отключение события WindowBeforeUnload
-        $scope.$on('$destroy', function () {
-            window.onbeforeunload = undefined;
-        });
-
-        // Событие смены локации
-        $scope.$on('$locationChangeStart', function (event, next, current) {
-            if(confirm('Вы действительно хотите уйти со страницы?')) {
-                $scope.vars.socket.close();
-                event.preventDefault();
-            }
-        });
-
         $scope.vars.loginName = randWDclassic(9);
         $scope.vars.roomName = 'Тест';
+
+        $scope.$apply();
     };
+
+    $scope.$watch('vars.currentAudioDevice', function (val) {
+        console.log('Видео: ' + val);
+    });
+
+    $scope.$watch('vars.currentVideoDevice', function (val) {
+        console.log('Аудио: ' + val);
+    });
 
     /**
      * Логин
@@ -79,6 +88,43 @@ kclient.controller('mainCtrl', function($scope) {
         };
 
         $scope.sendMessage(data);
+    };
+
+    /**
+     * Создает список устройств
+     * @param postCallback Функция обратного вызова
+     */
+    $scope.createDevicesList = function (postCallback) {
+        if (!navigator.enumerateDevices && window.MediaStreamTrack && window.MediaStreamTrack.getSources) {
+            navigator.enumerateDevices = window.MediaStreamTrack.getSources.bind(window.MediaStreamTrack);
+        }
+
+        if (!navigator.enumerateDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.enumerateDevices = navigator.mediaDevices.enumerateDevices.bind(navigator);
+        }
+
+        if (!navigator.enumerateDevices) {
+            console.error('Невозможно создать список устройств - нет такой функции...');
+        } else {
+            var collect = {
+                audio: [],
+                video: []
+            };
+
+            // Проход по устройствам
+            navigator.enumerateDevices (function (devices) {
+                angular.forEach(devices, function (device) {
+                    if(collect[device.kind] !== undefined) {
+                        collect[device.kind].push({
+                            deviceId: device.id,
+                            label: device.label
+                        });
+                    }
+                });
+
+                postCallback(collect.audio, collect.video);
+            });
+        }
     };
 
     /**
@@ -116,12 +162,19 @@ kclient.controller('mainCtrl', function($scope) {
      */
     var createPeer = function () {
         var mediaOpts = {
-            audio: true,
+            audio: {
+                mandatory: {
+                    sourceId: 'ddca89f146312b2a80911aac6f3456be80e2c98323bbd93d06ea9faef17c506a'
+                }
+            },
             video: {
                 mandatory: {
-                    maxWidth: 320,
-                    maxHeight: 240,
-                    minFrameRate: 15
+                    sourceId: 'c1471a8b2425a80883c978ca3d74606e4206a220ef92759f0771c9ddd234e10c',
+                    maxWidth: 800,
+                    maxHeight: 600,
+                    minWidth: 160,
+                    minHeight: 320,
+                    maxFrameRate: 25
                 }
             }
         };
@@ -271,6 +324,11 @@ kclient.controller('mainCtrl', function($scope) {
         }
     };
 
-    // Вызов функции инициализации
-    initialize();
+    // Вызов функций инициализации
+    $scope.createDevicesList(function(audios, videos) {
+        $scope.audioDevices = audios;
+        $scope.videoDevices = videos;
+
+        initialize();
+    });
 });
