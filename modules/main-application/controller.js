@@ -164,12 +164,12 @@ kclient.controller('mainCtrl', function($scope) {
         var mediaOpts = {
             audio: {
                 mandatory: {
-                    sourceId: 'ddca89f146312b2a80911aac6f3456be80e2c98323bbd93d06ea9faef17c506a'
+                    //sourceId: 'default'
                 }
             },
             video: {
                 mandatory: {
-                    sourceId: 'c1471a8b2425a80883c978ca3d74606e4206a220ef92759f0771c9ddd234e10c',
+                    //sourceId: 'default',
                     maxWidth: 800,
                     maxHeight: 600,
                     minWidth: 160,
