@@ -90,7 +90,7 @@ kclient.directive('peerViewer', function ($templateCache) {
                         maxWidth: 800,
                         maxHeight: 600,
                         minWidth: 320,
-                        maxWidth: 240,
+                        minHeight: 240,
                         minFrameRate: 10
                     }
                 }
