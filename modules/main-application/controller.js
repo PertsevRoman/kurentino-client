@@ -7,9 +7,7 @@ kclient.controller('mainCtrl', function($scope) {
     $scope.vars = {
         socket: new WebSocket('wss://' + location.host + ':8025'),
         logged: false,
-        sendPeer: null,
-        currentAudioDevice: '',
-        currentVideoDevice: ''
+        sendPeer: null
     };
 
     // Подключенные участники
@@ -67,14 +65,6 @@ kclient.controller('mainCtrl', function($scope) {
 
         $scope.$apply();
     };
-
-    $scope.$watch('vars.currentAudioDevice', function (val) {
-        console.log('Видео: ' + val);
-    });
-
-    $scope.$watch('vars.currentVideoDevice', function (val) {
-        console.log('Аудио: ' + val);
-    });
 
     /**
      * Логин
@@ -164,16 +154,16 @@ kclient.controller('mainCtrl', function($scope) {
         var mediaOpts = {
             audio: {
                 mandatory: {
-                    sourceId: 'ddca89f146312b2a80911aac6f3456be80e2c98323bbd93d06ea9faef17c506a'
+                    //sourceId: 'ddca89f146312b2a80911aac6f3456be80e2c98323bbd93d06ea9faef17c506a'
                 }
             },
             video: {
                 mandatory: {
-                    sourceId: 'c1471a8b2425a80883c978ca3d74606e4206a220ef92759f0771c9ddd234e10c',
+                    //sourceId: 'c1471a8b2425a80883c978ca3d74606e4206a220ef92759f0771c9ddd234e10c',
                     maxWidth: 800,
                     maxHeight: 600,
                     minWidth: 160,
-                    minHeight: 320,
+                    minHeight: 120,
                     maxFrameRate: 25
                 }
             }
@@ -263,6 +253,28 @@ kclient.controller('mainCtrl', function($scope) {
                     console.log('Основные пиры: ' + JSON.stringify($scope.peersMap));
 
                     if(json['name'] === $scope.vars.loginName) {
+                        // Создание хабового пира
+                        if($scope.$$childHead.createHubPeer !== undefined && $scope.$$childHead.hubPeer === undefined) {
+                            console.log('Создание хаб-пира');
+                            $scope.$$childHead.createHubPeer();
+                        } else {
+                            if (json['type'] !== undefined && json['type'] === 'recvHub') {
+                                console.log('Добавление хаб-кандидата');
+                                $scope.$$childHead.hubPeer.processAnswer(json['answer'], function (error) {
+                                    if (error) {
+                                        return console.error(error);
+                                    }
+                                });
+                                return;
+                            } else {
+                                if ($scope.$$childHead.createHubPeer === undefined) {
+                                    console.log($scope);
+                                    return console.error('Не определена функция создания пира');
+                                }
+                                return;
+                            }
+                        }
+
                         console.log('Ответ текущему пользователю' + json['name']);
                         $scope.vars.sendPeer.processAnswer(json['answer'], function (error) {
                             if(error) {
@@ -283,6 +295,16 @@ kclient.controller('mainCtrl', function($scope) {
                     console.log('Пришла метка ICE сервера. Пользователь: ' + json['name']);
 
                     var candObject = JSON.parse(json['candidate']);
+
+                    if(json['type'] !== undefined && json['type'] === 'recvHub') {
+                        $scope.$$childHead.hubPeer.addIceCandidate(candObject, function (error) {
+                            if(error) {
+                                return console.error('Не удалось добавить ICE сервер: ' + error);
+                            }
+                        });
+
+                        return;
+                    }
 
                     $scope.vars.sendPeer.addIceCandidate(candObject, function (error) {
                         if(error) {
@@ -327,6 +349,12 @@ kclient.controller('mainCtrl', function($scope) {
     // Вызов функций инициализации
     $scope.createDevicesList(function(audios, videos) {
         $scope.audioDevices = audios;
+
+        $scope.audioDevices.push({
+            deviceId: 'kdf',
+            label: 'Тест'
+        });
+
         $scope.videoDevices = videos;
 
         initialize();
