@@ -1,26 +1,30 @@
-<div id="video-box">
+<div>
     <div class="row">
         <div class="col-lg-6">
             <div class="form-group">
                 <label for="sel1">Видео</label>
-                <select class="form-control" ng-model="vars.currentVideoDevice" id="sel1">
-                    <option ng-repeat="audio in videoDevices" value="{{audio.sourceId}}">{{audio.label}}</option>
-                </select>
+                <select class="form-control" id="sel1" ng-model="currentVideoDevice" ng-change="videoChange(currentVideoDevice)" ng-options="item.sourceId as item.label for item in videoDevices track by item.sourceId"></select>
             </div>
         </div>
         <div class="col-lg-6">
             <div class="form-group">
                 <label for="sel2">Аудио</label>
-                <select class="form-control" ng-model="vars.currentAudioDevice" id="sel2">
-                    <option ng-repeat="video in audioDevices" value="{{video.sourceId}}">{{video.label}}</option>
-                </select>
+                <select class="form-control" id="sel2" ng-model="currentAudioDevice" ng-change="audioChange(currentAudioDevice)" ng-options="item.sourceId as item.label for item in audioDevices track by item.sourceId"></select>
             </div>
         </div>
     </div>
-    <div class="video-pull">
-        <peer-viewer ng-repeat="peer in connectedPeers" name="{{peer.name}}" width="{{peer.width}}" vid="{{$index}}" height="{{peer.height}}"></peer-viewer>
-    </div>
-    <div ng-show="vars.logged">
-        <video class="vid" width="160" height="120" autoplay></video>
+    <div id="video-box">
+        <div class="video-pull">
+            <peer-viewer ng-repeat="peer in connectedPeers" name="{{peer.name}}" width="{{peer.width}}" vid="{{$index}}" height="{{peer.height}}"></peer-viewer>
+        </div>
+        <div ng-show="vars.logged">
+            <video class="vid" width="160" height="120" autoplay></video>
+        </div>
+        <div>
+            <video id="trans" width="640" height="360" autoplay></video>
+        </div>
+        <div>
+            <button class="btn" ng-click="playVideo()">ИГРАТЬ!</button>
+        </div>
     </div>
 </div>

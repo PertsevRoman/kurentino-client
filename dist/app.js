@@ -11,7 +11,9 @@ kclient.controller('mainCtrl', function($scope) {
     $scope.vars = {
         socket: new WebSocket('wss://' + location.host + ':8025'),
         logged: false,
-        sendPeer: null
+        sendPeer: null,
+        currentAudioDevice: '',
+        currentVideoDevice: ''
     };
 
     // Подключенные участники
@@ -39,9 +41,20 @@ kclient.controller('mainCtrl', function($scope) {
         ICE: 'iceCandidate',
         OFFER_ANSWER: 'offerAnswer',
         NEW_USER: 'newParter',
-        EXISTS_LIST: 'existsList'
+        EXISTS_LIST: 'existsList',
+        REMOVE_USER: 'removeUser'
     };
 
+    // Доступные устройства
+    $scope.audioDevices = [];
+    $scope.videoDevices = [];
+    $scope.screenDevices = [];
+
+    /**
+     * Генерация случайной последователяности симоволов
+     * @param n Количество символов
+     * @returns {string} Последовательность
+     */
     var randWDclassic = function(n) {
         var s ='', abd ='abcdefghijklmnopqrstuvwxyz0123456789', aL = abd.length;
         while(s.length < n)
@@ -53,22 +66,19 @@ kclient.controller('mainCtrl', function($scope) {
      * Функция инициализации соединения с сервером
      */
     var initialize = function () {
-        // Отключение события WindowBeforeUnload
-        $scope.$on('$destroy', function () {
-            window.onbeforeunload = undefined;
-        });
-
-        // Событие смены локации
-        $scope.$on('$locationChangeStart', function (event, next, current) {
-            if(confirm('Вы действительно хотите уйти со страницы?')) {
-                $scope.vars.socket.close();
-                event.preventDefault();
-            }
-        });
-
         $scope.vars.loginName = randWDclassic(9);
         $scope.vars.roomName = 'Тест';
+
+        $scope.$apply();
     };
+
+    $scope.$watch('vars.currentAudioDevice', function (val) {
+        console.log('Видео: ' + val);
+    });
+
+    $scope.$watch('vars.currentVideoDevice', function (val) {
+        console.log('Аудио: ' + val);
+    });
 
     /**
      * Логин
@@ -82,6 +92,43 @@ kclient.controller('mainCtrl', function($scope) {
         };
 
         $scope.sendMessage(data);
+    };
+
+    /**
+     * Создает список устройств
+     * @param postCallback Функция обратного вызова
+     */
+    $scope.createDevicesList = function (postCallback) {
+        if (!navigator.enumerateDevices && window.MediaStreamTrack && window.MediaStreamTrack.getSources) {
+            navigator.enumerateDevices = window.MediaStreamTrack.getSources.bind(window.MediaStreamTrack);
+        }
+
+        if (!navigator.enumerateDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.enumerateDevices = navigator.mediaDevices.enumerateDevices.bind(navigator);
+        }
+
+        if (!navigator.enumerateDevices) {
+            console.error('Невозможно создать список устройств - нет такой функции...');
+        } else {
+            var collect = {
+                audio: [],
+                video: []
+            };
+
+            // Проход по устройствам
+            navigator.enumerateDevices (function (devices) {
+                angular.forEach(devices, function (device) {
+                    if(collect[device.kind] !== undefined) {
+                        collect[device.kind].push({
+                            deviceId: device.id,
+                            label: device.label
+                        });
+                    }
+                });
+
+                postCallback(collect.audio, collect.video);
+            });
+        }
     };
 
     /**
@@ -119,15 +166,24 @@ kclient.controller('mainCtrl', function($scope) {
      */
     var createPeer = function () {
         var mediaOpts = {
-            audio: false,
+            audio: {
+                mandatory: {
+                    //sourceId: 'default'
+                }
+            },
             video: {
                 mandatory: {
-                    minFrameRate: 15
+                    //sourceId: 'default',
+                    maxWidth: 800,
+                    maxHeight: 600,
+                    minWidth: 160,
+                    minHeight: 120,
+                    maxFrameRate: 25
                 }
             }
         };
 
-        var vid = $('#vid')[0];
+        var vid = $('.vid')[0];
 
         var options = {
             localVideo: vid,
@@ -232,11 +288,24 @@ kclient.controller('mainCtrl', function($scope) {
 
                     var candObject = JSON.parse(json['candidate']);
 
-                    $scope.vars.sendPeer.addIceCandidate(candObject, function (error) {
-                        if(error) {
-                            return console.error('Не удалось добавить ICE сервер: ' + error);
+                    if(json['name'] === $scope.vars.loginName) {
+                        $scope.vars.sendPeer.addIceCandidate(candObject, function (error) {
+                            if(error) {
+                                return console.error('Не удалось добавить ICE сервер для передающего пира: ' + error);
+                            }
+                        });
+                    } else {
+                        if($scope.peersMap[json['name']] !== undefined) {
+                            $scope.peersMap[json['name']].addIceCandidate(candObject, function (error) {
+                                console.log('Обработан кандидат для принимающего пира...');
+                                if(error) {
+                                    return console.error('Не удалось добавить ICE сервер для принимающего пира: ' + error);
+                                }
+                            });
+                        } else {
+                            return console.error('Нет пира с таким именем');
                         }
-                    });
+                    }
                 } break;
             case $scope.serverMsgTypes.EXISTS_LIST: {
                     console.log('Сообщение: ' + JSON.stringify(json))
@@ -253,13 +322,32 @@ kclient.controller('mainCtrl', function($scope) {
             case $scope.serverMsgTypes.NEW_USER: {
                     console.log('В комнату вошел новый пользователь: ' + json['name']);
                 } break;
+            case $scope.serverMsgTypes.REMOVE_USER: {
+                    console.log('Удаление пользователя: ' + json['name']);
+
+                    // Освобождение пира
+                    $scope.peersMap[json['name']].dispose();
+
+                    // Удаление узла
+                    $scope.connectedPeers = $scope.connectedPeers.filter(function (elem) {
+                        return elem.name !== json['name'];
+                    });
+
+                    // Перерисовка
+                    $scope.$apply();
+                } break;
             default:
                 console.log('Обработчик сообщения еще не имплементирован');
         }
     };
 
-    // Вызов функции инициализации
-    initialize();
+    // Вызов функций инициализации
+    $scope.createDevicesList(function(audios, videos) {
+        $scope.audioDevices = audios;
+        $scope.videoDevices = videos;
+
+        initialize();
+    });
 });
 /**
 * Директива реализует вьювер аппонента
@@ -273,7 +361,26 @@ kclient.directive('peerViewer', function ($templateCache) {
         link: function ($scope, element, attrs) {
             $scope.width = parseInt(attrs['width'], 10);
             $scope.height = parseInt(attrs['height'], 10);
+            $scope.vid = parseInt(attrs['vid'], 10);
+
             var userName = attrs['name'];
+
+            $scope.overed = false;
+            $scope.maximized = false;
+
+            /**
+             * Функция вызывается при наведении мыши на элемент
+             */
+            $scope.overMouse = function () {
+                $scope.overed = true;
+            };
+
+            /**
+             * Функция вызывается при выходе указателя мыщи за пределы экрана
+             */
+            $scope.leaveMouse = function() {
+                $scope.overed = false;
+            };
 
             $scope.videoElem = element.find('video')[0];
 
@@ -327,8 +434,22 @@ kclient.directive('peerViewer', function ($templateCache) {
                 this.generateOffer(offerToReceiveVideo);
             };
 
+            var mediaOpts = {
+                audio: true,
+                video: {
+                    mandatory: {
+                        maxWidth: 800,
+                        maxHeight: 600,
+                        minWidth: 320,
+                        minHeight: 240,
+                        minFrameRate: 10
+                    }
+                }
+            };
+
             var options = {
                 remoteVideo: $scope.videoElem,
+                mediaConstraints: mediaOpts,
                 onicecandidate: onIceCandidate
             };
 

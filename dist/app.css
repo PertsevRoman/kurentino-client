@@ -1,6 +1,56 @@
+#video-box {
+  /* The total width of the image-box, mainly for centering */
+  width: 1120px;
+  height: 600px;
+  margin: 0 auto;
+  position: relative;
+  bottom: 0; }
 
-div .peer-viewer {
-  border: 2px solid black;
-  border-radius: 5px;
-  float: left;
-  margin-bottom: 2px; }
+.video-pull {
+  height: 600px;
+  width: 1120px;
+  overflow-y: auto;
+  overflow: -moz-scrollbars-none; }
+
+.video-pull::-webkit-scrollbar {
+  width: 0; }
+
+.vid {
+  position: absolute;
+  right: 10px;
+  bottom: 10px; }
+
+.peer-viewer {
+  width: 320px; }
+
+.video-container {
+  width: inherit;
+  height: inherit; }
+
+.video-box {
+  width: inherit;
+  height: inherit;
+  position: relative;
+  top: 0; }
+
+.video-box span {
+  display: none; }
+
+.video-box .expand {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  background: transparent;
+  /* Fixes an IE bug */
+  left: 0; }
+
+div[id^=video]:target {
+  width: 800px;
+  height: 600px;
+  position: absolute;
+  left: 320px;
+  top: 0; }
+
+div[id^=video]:target .expand {
+  display: block; }
