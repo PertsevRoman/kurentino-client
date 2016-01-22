@@ -39,9 +39,20 @@ kclient.controller('mainCtrl', function($scope) {
         ICE: 'iceCandidate',
         OFFER_ANSWER: 'offerAnswer',
         NEW_USER: 'newParter',
-        EXISTS_LIST: 'existsList'
+        EXISTS_LIST: 'existsList',
+        REMOVE_USER: 'removeUser'
     };
 
+    // Доступные устройства
+    $scope.audioDevices = [];
+    $scope.videoDevices = [];
+    $scope.screenDevices = [];
+
+    /**
+     * Генерация случайной последователяности симоволов
+     * @param n Количество символов
+     * @returns {string} Последовательность
+     */
     var randWDclassic = function(n) {
         var s ='', abd ='abcdefghijklmnopqrstuvwxyz0123456789', aL = abd.length;
         while(s.length < n)
@@ -53,21 +64,10 @@ kclient.controller('mainCtrl', function($scope) {
      * Функция инициализации соединения с сервером
      */
     var initialize = function () {
-        // Отключение события WindowBeforeUnload
-        $scope.$on('$destroy', function () {
-            window.onbeforeunload = undefined;
-        });
-
-        // Событие смены локации
-        $scope.$on('$locationChangeStart', function (event, next, current) {
-            if(confirm('Вы действительно хотите уйти со страницы?')) {
-                $scope.vars.socket.close();
-                event.preventDefault();
-            }
-        });
-
         $scope.vars.loginName = randWDclassic(9);
         $scope.vars.roomName = 'Тест';
+
+        $scope.$apply();
     };
 
     /**
@@ -82,6 +82,43 @@ kclient.controller('mainCtrl', function($scope) {
         };
 
         $scope.sendMessage(data);
+    };
+
+    /**
+     * Создает список устройств
+     * @param postCallback Функция обратного вызова
+     */
+    $scope.createDevicesList = function (postCallback) {
+        if (!navigator.enumerateDevices && window.MediaStreamTrack && window.MediaStreamTrack.getSources) {
+            navigator.enumerateDevices = window.MediaStreamTrack.getSources.bind(window.MediaStreamTrack);
+        }
+
+        if (!navigator.enumerateDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.enumerateDevices = navigator.mediaDevices.enumerateDevices.bind(navigator);
+        }
+
+        if (!navigator.enumerateDevices) {
+            console.error('Невозможно создать список устройств - нет такой функции...');
+        } else {
+            var collect = {
+                audio: [],
+                video: []
+            };
+
+            // Проход по устройствам
+            navigator.enumerateDevices (function (devices) {
+                angular.forEach(devices, function (device) {
+                    if(collect[device.kind] !== undefined) {
+                        collect[device.kind].push({
+                            deviceId: device.id,
+                            label: device.label
+                        });
+                    }
+                });
+
+                postCallback(collect.audio, collect.video);
+            });
+        }
     };
 
     /**
@@ -119,15 +156,24 @@ kclient.controller('mainCtrl', function($scope) {
      */
     var createPeer = function () {
         var mediaOpts = {
-            audio: false,
+            audio: {
+                mandatory: {
+                    //sourceId: 'ddca89f146312b2a80911aac6f3456be80e2c98323bbd93d06ea9faef17c506a'
+                }
+            },
             video: {
                 mandatory: {
-                    minFrameRate: 15
+                    //sourceId: 'c1471a8b2425a80883c978ca3d74606e4206a220ef92759f0771c9ddd234e10c',
+                    maxWidth: 800,
+                    maxHeight: 600,
+                    minWidth: 160,
+                    minHeight: 120,
+                    maxFrameRate: 25
                 }
             }
         };
 
-        var vid = $('#vid')[0];
+        var vid = $('.vid')[0];
 
         var options = {
             localVideo: vid,
@@ -211,6 +257,28 @@ kclient.controller('mainCtrl', function($scope) {
                     console.log('Основные пиры: ' + JSON.stringify($scope.peersMap));
 
                     if(json['name'] === $scope.vars.loginName) {
+                        // Создание хабового пира
+                        if($scope.$$childHead.createHubPeer !== undefined && $scope.$$childHead.hubPeer === undefined) {
+                            console.log('Создание хаб-пира');
+                            $scope.$$childHead.createHubPeer();
+                        } else {
+                            if (json['type'] !== undefined && json['type'] === 'recvHub') {
+                                console.log('Добавление хаб-кандидата');
+                                $scope.$$childHead.hubPeer.processAnswer(json['answer'], function (error) {
+                                    if (error) {
+                                        return console.error(error);
+                                    }
+                                });
+                                return;
+                            } else {
+                                if ($scope.$$childHead.createHubPeer === undefined) {
+                                    console.log($scope);
+                                    return console.error('Не определена функция создания пира');
+                                }
+                                return;
+                            }
+                        }
+
                         console.log('Ответ текущему пользователю' + json['name']);
                         $scope.vars.sendPeer.processAnswer(json['answer'], function (error) {
                             if(error) {
@@ -231,6 +299,16 @@ kclient.controller('mainCtrl', function($scope) {
                     console.log('Пришла метка ICE сервера. Пользователь: ' + json['name']);
 
                     var candObject = JSON.parse(json['candidate']);
+
+                    if(json['type'] !== undefined && json['type'] === 'recvHub') {
+                        $scope.$$childHead.hubPeer.addIceCandidate(candObject, function (error) {
+                            if(error) {
+                                return console.error('Не удалось добавить ICE сервер: ' + error);
+                            }
+                        });
+
+                        return;
+                    }
 
                     $scope.vars.sendPeer.addIceCandidate(candObject, function (error) {
                         if(error) {
@@ -253,13 +331,38 @@ kclient.controller('mainCtrl', function($scope) {
             case $scope.serverMsgTypes.NEW_USER: {
                     console.log('В комнату вошел новый пользователь: ' + json['name']);
                 } break;
+            case $scope.serverMsgTypes.REMOVE_USER: {
+                    console.log('Удаление пользователя: ' + json['name']);
+
+                    // Освобождение пира
+                    $scope.peersMap[json['name']].dispose();
+
+                    // Удаление узла
+                    $scope.connectedPeers = $scope.connectedPeers.filter(function (elem) {
+                        return elem.name !== json['name'];
+                    });
+
+                    // Перерисовка
+                    $scope.$apply();
+                } break;
             default:
                 console.log('Обработчик сообщения еще не имплементирован');
         }
     };
 
-    // Вызов функции инициализации
-    initialize();
+    // Вызов функций инициализации
+    $scope.createDevicesList(function(audios, videos) {
+        $scope.audioDevices = audios;
+
+        $scope.audioDevices.push({
+            deviceId: 'kdf',
+            label: 'Тест'
+        });
+
+        $scope.videoDevices = videos;
+
+        initialize();
+    });
 });
 /**
 * Директива реализует вьювер аппонента
@@ -273,7 +376,26 @@ kclient.directive('peerViewer', function ($templateCache) {
         link: function ($scope, element, attrs) {
             $scope.width = parseInt(attrs['width'], 10);
             $scope.height = parseInt(attrs['height'], 10);
+            $scope.vid = parseInt(attrs['vid'], 10);
+
             var userName = attrs['name'];
+
+            $scope.overed = false;
+            $scope.maximized = false;
+
+            /**
+             * Функция вызывается при наведении мыши на элемент
+             */
+            $scope.overMouse = function () {
+                $scope.overed = true;
+            };
+
+            /**
+             * Функция вызывается при выходе указателя мыщи за пределы экрана
+             */
+            $scope.leaveMouse = function() {
+                $scope.overed = false;
+            };
 
             $scope.videoElem = element.find('video')[0];
 
@@ -327,8 +449,22 @@ kclient.directive('peerViewer', function ($templateCache) {
                 this.generateOffer(offerToReceiveVideo);
             };
 
+            var mediaOpts = {
+                audio: true,
+                video: {
+                    mandatory: {
+                        maxWidth: 800,
+                        maxHeight: 600,
+                        minWidth: 320,
+                        minHeight: 240,
+                        minFrameRate: 10
+                    }
+                }
+            };
+
             var options = {
                 remoteVideo: $scope.videoElem,
+                mediaConstraints: mediaOpts,
                 onicecandidate: onIceCandidate
             };
 
@@ -350,6 +486,80 @@ kclient.directive('callContainer', function ($templateCache) {
             template: $templateCache.get('./dist/kc-call-container/template.html'),
             scope: true,
             link: function ($scope, element, attrs) {
+                var video_elem = element.find('#trans')[0];
+
+                var onIceCandidate = function (candidate, w) {
+                    console.log("Локальный хаб-кандидат: " + JSON.stringify(candidate));
+
+                    var message = {
+                        id: $scope.clientMsgTypes.ON_ICE,
+                        candidate: candidate,
+                        name: $scope.vars.loginName,
+                        type: 'recvHub'
+                    };
+
+                    $scope.sendMessage(message);
+                };
+
+                $scope.playVideo = function () {
+                    console.log('Играем видео!');
+                    var msg =  {
+                        id : 'playVideo',
+                        sender : $scope.vars.loginName,
+                        type: 'recvHub'
+                    };
+
+                    $scope.sendMessage(msg);
+                };
+
+                var offerToReceiveVideo = function(error, offerSdp, wp){
+                    if (error) {
+                        return console.error(error);
+                    }
+
+                    console.log('Отправка сообщения хабом на прием видео');
+
+                    var msg =  {
+                        id : $scope.clientMsgTypes.OFFER_TO_RECIEVE,
+                        sender : $scope.vars.loginName,
+                        type: 'recvHub',
+                        offer : offerSdp
+                    };
+
+                    $scope.sendMessage(msg);
+                };
+
+                var peerCreated = function(error) {
+                    console.log('Хаб-пир создан!');
+                    if(error) {
+                        return console.error(error);
+                    }
+
+                    this.generateOffer(offerToReceiveVideo);
+                };
+
+                var mediaOpts = {
+                    audio: true,
+                    video: {
+                        mandatory: {
+                            maxWidth: 800,
+                            maxHeight: 600,
+                            minWidth: 320,
+                            maxWidth: 240,
+                            minFrameRate: 10
+                        }
+                    }
+                };
+
+                var options = {
+                    remoteVideo: video_elem,
+                    mediaConstraints: mediaOpts,
+                    onicecandidate: onIceCandidate
+                };
+
+                $scope.createHubPeer = function () {
+                    $scope.hubPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options, peerCreated);
+                };
             }
     };
 });
