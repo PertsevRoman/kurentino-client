@@ -11,7 +11,9 @@ kclient.controller('mainCtrl', function($scope) {
     $scope.vars = {
         socket: new WebSocket('wss://' + location.host + ':8025'),
         logged: false,
-        sendPeer: null
+        sendPeer: null,
+        currentAudioDevice: '',
+        currentVideoDevice: ''
     };
 
     // Подключенные участники
@@ -69,6 +71,14 @@ kclient.controller('mainCtrl', function($scope) {
 
         $scope.$apply();
     };
+
+    $scope.$watch('vars.currentAudioDevice', function (val) {
+        console.log('Видео: ' + val);
+    });
+
+    $scope.$watch('vars.currentVideoDevice', function (val) {
+        console.log('Аудио: ' + val);
+    });
 
     /**
      * Логин
@@ -158,12 +168,12 @@ kclient.controller('mainCtrl', function($scope) {
         var mediaOpts = {
             audio: {
                 mandatory: {
-                    //sourceId: 'ddca89f146312b2a80911aac6f3456be80e2c98323bbd93d06ea9faef17c506a'
+                    //sourceId: 'default'
                 }
             },
             video: {
                 mandatory: {
-                    //sourceId: 'c1471a8b2425a80883c978ca3d74606e4206a220ef92759f0771c9ddd234e10c',
+                    //sourceId: 'default',
                     maxWidth: 800,
                     maxHeight: 600,
                     minWidth: 160,
@@ -257,28 +267,6 @@ kclient.controller('mainCtrl', function($scope) {
                     console.log('Основные пиры: ' + JSON.stringify($scope.peersMap));
 
                     if(json['name'] === $scope.vars.loginName) {
-                        // Создание хабового пира
-                        if($scope.$$childHead.createHubPeer !== undefined && $scope.$$childHead.hubPeer === undefined) {
-                            console.log('Создание хаб-пира');
-                            $scope.$$childHead.createHubPeer();
-                        } else {
-                            if (json['type'] !== undefined && json['type'] === 'recvHub') {
-                                console.log('Добавление хаб-кандидата');
-                                $scope.$$childHead.hubPeer.processAnswer(json['answer'], function (error) {
-                                    if (error) {
-                                        return console.error(error);
-                                    }
-                                });
-                                return;
-                            } else {
-                                if ($scope.$$childHead.createHubPeer === undefined) {
-                                    console.log($scope);
-                                    return console.error('Не определена функция создания пира');
-                                }
-                                return;
-                            }
-                        }
-
                         console.log('Ответ текущему пользователю' + json['name']);
                         $scope.vars.sendPeer.processAnswer(json['answer'], function (error) {
                             if(error) {
@@ -300,21 +288,24 @@ kclient.controller('mainCtrl', function($scope) {
 
                     var candObject = JSON.parse(json['candidate']);
 
-                    if(json['type'] !== undefined && json['type'] === 'recvHub') {
-                        $scope.$$childHead.hubPeer.addIceCandidate(candObject, function (error) {
+                    if(json['name'] === $scope.vars.loginName) {
+                        $scope.vars.sendPeer.addIceCandidate(candObject, function (error) {
                             if(error) {
-                                return console.error('Не удалось добавить ICE сервер: ' + error);
+                                return console.error('Не удалось добавить ICE сервер для передающего пира: ' + error);
                             }
                         });
-
-                        return;
-                    }
-
-                    $scope.vars.sendPeer.addIceCandidate(candObject, function (error) {
-                        if(error) {
-                            return console.error('Не удалось добавить ICE сервер: ' + error);
+                    } else {
+                        if($scope.peersMap[json['name']] !== undefined) {
+                            $scope.peersMap[json['name']].addIceCandidate(candObject, function (error) {
+                                console.log('Обработан кандидат для принимающего пира...');
+                                if(error) {
+                                    return console.error('Не удалось добавить ICE сервер для принимающего пира: ' + error);
+                                }
+                            });
+                        } else {
+                            return console.error('Нет пира с таким именем');
                         }
-                    });
+                    }
                 } break;
             case $scope.serverMsgTypes.EXISTS_LIST: {
                     console.log('Сообщение: ' + JSON.stringify(json))
@@ -353,12 +344,6 @@ kclient.controller('mainCtrl', function($scope) {
     // Вызов функций инициализации
     $scope.createDevicesList(function(audios, videos) {
         $scope.audioDevices = audios;
-
-        $scope.audioDevices.push({
-            deviceId: 'kdf',
-            label: 'Тест'
-        });
-
         $scope.videoDevices = videos;
 
         initialize();
@@ -486,80 +471,6 @@ kclient.directive('callContainer', function ($templateCache) {
             template: $templateCache.get('./dist/kc-call-container/template.html'),
             scope: true,
             link: function ($scope, element, attrs) {
-                var video_elem = element.find('#trans')[0];
-
-                var onIceCandidate = function (candidate, w) {
-                    console.log("Локальный хаб-кандидат: " + JSON.stringify(candidate));
-
-                    var message = {
-                        id: $scope.clientMsgTypes.ON_ICE,
-                        candidate: candidate,
-                        name: $scope.vars.loginName,
-                        type: 'recvHub'
-                    };
-
-                    $scope.sendMessage(message);
-                };
-
-                $scope.playVideo = function () {
-                    console.log('Играем видео!');
-                    var msg =  {
-                        id : 'playVideo',
-                        sender : $scope.vars.loginName,
-                        type: 'recvHub'
-                    };
-
-                    $scope.sendMessage(msg);
-                };
-
-                var offerToReceiveVideo = function(error, offerSdp, wp){
-                    if (error) {
-                        return console.error(error);
-                    }
-
-                    console.log('Отправка сообщения хабом на прием видео');
-
-                    var msg =  {
-                        id : $scope.clientMsgTypes.OFFER_TO_RECIEVE,
-                        sender : $scope.vars.loginName,
-                        type: 'recvHub',
-                        offer : offerSdp
-                    };
-
-                    $scope.sendMessage(msg);
-                };
-
-                var peerCreated = function(error) {
-                    console.log('Хаб-пир создан!');
-                    if(error) {
-                        return console.error(error);
-                    }
-
-                    this.generateOffer(offerToReceiveVideo);
-                };
-
-                var mediaOpts = {
-                    audio: true,
-                    video: {
-                        mandatory: {
-                            maxWidth: 800,
-                            maxHeight: 600,
-                            minWidth: 320,
-                            maxWidth: 240,
-                            minFrameRate: 10
-                        }
-                    }
-                };
-
-                var options = {
-                    remoteVideo: video_elem,
-                    mediaConstraints: mediaOpts,
-                    onicecandidate: onIceCandidate
-                };
-
-                $scope.createHubPeer = function () {
-                    $scope.hubPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerRecvonly(options, peerCreated);
-                };
             }
     };
 });

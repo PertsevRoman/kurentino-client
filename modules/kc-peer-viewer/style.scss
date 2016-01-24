@@ -32,7 +32,7 @@ div[id^=video]:target {
     height: 600px;
     position: absolute;
     left: 320px;
-    top: 0px;
+    top: 0;
 }
 
 div[id^=video]:target .expand {

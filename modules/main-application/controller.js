@@ -306,11 +306,24 @@ kclient.controller('mainCtrl', function($scope) {
                         return;
                     }
 
-                    $scope.vars.sendPeer.addIceCandidate(candObject, function (error) {
-                        if(error) {
-                            return console.error('Не удалось добавить ICE сервер: ' + error);
+                    if(json['name'] === $scope.vars.loginName) {
+                        $scope.vars.sendPeer.addIceCandidate(candObject, function (error) {
+                            if (error) {
+                                return console.error('Не удалось добавить ICE сервер для передающего пира: ' + error);
+                            }
+                        });
+                    } else {
+                        if($scope.peersMap[json['name']] !== undefined) {
+                            $scope.peersMap[json['name']].addIceCandidate(candObject, function (error) {
+                                console.log('Обработан кандидат для принимающего пира...');
+                                if(error) {
+                                    return console.error('Не удалось добавить ICE сервер для принимающего пира: ' + error);
+                                }
+                            });
+                        } else {
+                            return console.error('Нет пира с таким именем');
                         }
-                    });
+                    }
                 } break;
             case $scope.serverMsgTypes.EXISTS_LIST: {
                     console.log('Сообщение: ' + JSON.stringify(json))

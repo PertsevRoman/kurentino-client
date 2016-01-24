@@ -20,13 +20,6 @@
   right: 10px;
   bottom: 10px; }
 
-#trans {
-  position: fixed;
-  right: 10px;
-  top: 10px;
-  z-index: 10000;
-  border: 1px solid black; }
-
 .peer-viewer {
   width: 320px; }
 
@@ -57,7 +50,7 @@ div[id^=video]:target {
   height: 600px;
   position: absolute;
   left: 320px;
-  top: 0px; }
+  top: 0; }
 
 div[id^=video]:target .expand {
   display: block; }
