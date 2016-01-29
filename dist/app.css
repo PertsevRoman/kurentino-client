@@ -20,6 +20,13 @@
   right: 10px;
   bottom: 10px; }
 
+#trans {
+  position: fixed;
+  right: 10px;
+  top: 10px;
+  z-index: 10000;
+  border: 1px solid black; }
+
 .peer-viewer {
   width: 320px; }
 

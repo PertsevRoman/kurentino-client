@@ -152,21 +152,21 @@ kclient.controller('mainCtrl', function($scope) {
      */
     var createPeer = function () {
         var mediaOpts = {
-            audio: {
+            audio: this.audio ? {
                 mandatory: {
-                    //sourceId: 'ddca89f146312b2a80911aac6f3456be80e2c98323bbd93d06ea9faef17c506a'
+                    sourceId: this.audio
                 }
-            },
-            video: {
+            } : this.audio,
+            video: this.video ? {
                 mandatory: {
-                    //sourceId: 'c1471a8b2425a80883c978ca3d74606e4206a220ef92759f0771c9ddd234e10c',
+                    sourceId: this.video,
                     maxWidth: 800,
                     maxHeight: 600,
                     minWidth: 160,
                     minHeight: 120,
                     maxFrameRate: 25
                 }
-            }
+            }: this.video
         };
 
         var vid = $('.vid')[0];
@@ -331,8 +331,8 @@ kclient.controller('mainCtrl', function($scope) {
                     angular.forEach(json['names'], function (name, index) {
                         var existUser = {};
                         existUser['name'] = name;
-                        existUser['width'] = 320;
-                        existUser['height'] = 240;
+                        existUser['width'] = 160;
+                        existUser['height'] = 120;
 
                         $scope.addNewPeer(existUser);
                     });
@@ -346,10 +346,12 @@ kclient.controller('mainCtrl', function($scope) {
                     // Освобождение пира
                     $scope.peersMap[json['name']].dispose();
 
+                    delete $scope.connectedPeers[json['name']];
+
                     // Удаление узла
-                    $scope.connectedPeers = $scope.connectedPeers.filter(function (elem) {
-                        return elem.name !== json['name'];
-                    });
+                    //$scope.connectedPeers = $scope.connectedPeers.filter(function (elem) {
+                    //    return elem.name !== json['name'];
+                    //});
 
                     // Перерисовка
                     $scope.$apply();
