@@ -1,0 +1,30 @@
+#video-box {
+  /* The total width of the image-box, mainly for centering */
+  width: 1120px;
+  height: 600px;
+  margin: 0 auto;
+  position: relative;
+  bottom: 0; }
+
+.video-pull {
+  height: 600px;
+  width: 1120px;
+  overflow-y: auto;
+  overflow: -moz-scrollbars-none; }
+
+.video-pull::-webkit-scrollbar {
+  width: 0; }
+
+.vid {
+  position: absolute;
+  right: 10px;
+  bottom: 10px; }
+
+#trans {
+  position: fixed;
+  right: 10px;
+  top: 10px;
+  z-index: 10000;
+  border: 1px solid black; }
+
+/*# sourceMappingURL=style.css.map */
